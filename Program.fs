@@ -52,27 +52,20 @@ let proc =
 
 proc.Start() |> ignore
 
-let readAllBytes (reader:BinaryReader) =
-  let bufferSize = 4096
-  use ms = new MemoryStream()
-  let buffer = Array.create bufferSize 0uy
-  let mutable count = 0
-  count <- reader.Read(buffer, 0, bufferSize)
-  while (count <> 0) do
-    ms.Write(buffer, 0, count)
-    count <- reader.Read(buffer, 0, bufferSize)
-
-  ms.ToArray()
-
 let bytes = RoundTripData.toMessagePack inputs
 let writer = new BinaryWriter(proc.StandardInput.BaseStream)
 writer.Write bytes
 writer.Close ()
 
 let err = proc.StandardError.ReadToEnd()
+
+let readAllBytes (stream:Stream) =
+  use ms = new MemoryStream()
+  do stream.CopyTo(ms)
+  ms.ToArray()
+
 let output =
-  use reader = new BinaryReader(proc.StandardOutput.BaseStream)
-  let bytes = readAllBytes reader
+  let bytes = readAllBytes proc.StandardOutput.BaseStream
   RoundTripData.fromMessagePack bytes
 
 printfn $"%A{output}"
